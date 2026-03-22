@@ -294,7 +294,8 @@ const CATEGORIES = [
 
 // ── Main App ──────────────────────────────────────────────────────────────────
 export default function App() {
-  const [phase, setPhase] = useState('intro')
+  const [phase, setPhase] = useState('home')
+  const [expandingCategory, setExpandingCategory] = useState(0)
   const [typedAnswer, setTypedAnswer] = useState('')
   const [showCard, setShowCard] = useState(false)
   const [showWords, setShowWords] = useState(false)
@@ -309,6 +310,13 @@ export default function App() {
 
   const currentQuestion = QUESTIONS[questionIndex % QUESTIONS.length]
   const selectedCategory = CATEGORIES[selectedCategoryIndex]
+
+  // Expanding → intro transition
+  useEffect(() => {
+    if (phase !== 'expanding') return
+    const t = setTimeout(() => setPhase('intro'), 1500)
+    return () => clearTimeout(t)
+  }, [phase])
 
   // Intro sequence
   useEffect(() => {
@@ -394,7 +402,12 @@ export default function App() {
     setSelectedCategoryIndex(1)
     setShowAnswer(false)
     setSentQuestion('')
-    setPhase('intro')
+    setPhase('home')
+  }
+
+  const handleHytchClick = (catIndex) => {
+    setExpandingCategory(catIndex)
+    setPhase('expanding')
   }
 
   const handleClose = () => {
@@ -413,6 +426,103 @@ export default function App() {
     <div style={S.root}>
       <Agentation />
       <div style={S.phone}>
+
+        {/* ── HOME ── */}
+        <AnimatePresence>
+          {phase === 'home' && (
+            <motion.div key="home" style={{ ...S.screen, padding: '60px 20px 20px' }}
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.15 } }}>
+              <p style={{ fontSize: 28, fontWeight: 700, color: '#1a1a2e', letterSpacing: '-0.025em', margin: '0 0 24px 4px' }}>
+                Your Hytches
+              </p>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                {CATEGORIES.map((cat, i) => {
+                  const { CardComponent } = cat
+                  return (
+                    <motion.div
+                      key={cat.id}
+                      style={{
+                        width: '100%', aspectRatio: '4/5',
+                        borderRadius: 16, overflow: 'hidden',
+                        backgroundColor: cat.color, cursor: 'pointer',
+                        position: 'relative',
+                      }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleHytchClick(i)}
+                    >
+                      <CardComponent />
+                      <div style={{
+                        position: 'absolute', bottom: 8, left: 0, right: 0,
+                        textAlign: 'center', fontSize: 11, fontWeight: 600,
+                        color: 'rgba(255,255,255,0.9)', letterSpacing: '-0.01em',
+                      }}>
+                        {cat.label}
+                      </div>
+                    </motion.div>
+                  )
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* ── EXPANDING ── */}
+        <AnimatePresence>
+          {phase === 'expanding' && (() => {
+            const frontCat = CATEGORIES[expandingCategory]
+            const backCatIndex = (expandingCategory + 1) % CATEGORIES.length
+            const backCat = CATEGORIES[backCatIndex]
+            const FrontCard = frontCat.CardComponent
+            const BackCard = backCat.CardComponent
+            return (
+              <motion.div key="expanding" style={{ ...S.screen, alignItems: 'center', justifyContent: 'center' }}
+                initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0, transition: { duration: 0.12 } }}>
+                <div style={{ position: 'relative', width: CARD_W, height: CARD_H + 40 }}>
+                  {/* Back card — other person's card, peeking from behind */}
+                  <motion.div
+                    style={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: 0,
+                      width: CARD_W,
+                      height: CARD_H,
+                      borderRadius: 28,
+                      overflow: 'hidden',
+                      backgroundColor: backCat.color,
+                      transformOrigin: 'center bottom',
+                    }}
+                    initial={{ scale: 0, x: '-50%', opacity: 0 }}
+                    animate={{ scale: 0.88, x: '-50%', y: -20, opacity: 0.7, rotate: -2 }}
+                    transition={{ delay: 0.1, type: 'spring', stiffness: 380, damping: 32 }}
+                  >
+                    <BackCard />
+                  </motion.div>
+
+                  {/* Front card — your card, biggest */}
+                  <motion.div
+                    style={{
+                      position: 'absolute',
+                      left: '50%',
+                      top: 20,
+                      width: CARD_W,
+                      height: CARD_H,
+                      borderRadius: 28,
+                      overflow: 'hidden',
+                      backgroundColor: frontCat.color,
+                      boxShadow: `0 20px 60px ${frontCat.color}55`,
+                      zIndex: 2,
+                    }}
+                    initial={{ scale: 0, x: '-50%', opacity: 0 }}
+                    animate={{ scale: 1, x: '-50%', opacity: 1 }}
+                    transition={{ type: 'spring', stiffness: 380, damping: 30 }}
+                  >
+                    <FrontCard />
+                  </motion.div>
+                </div>
+              </motion.div>
+            )
+          })()}
+        </AnimatePresence>
 
         {/* ── CLOSED ── */}
         <AnimatePresence>
